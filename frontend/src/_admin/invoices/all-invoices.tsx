@@ -55,7 +55,7 @@ export default function AllInvoices() {
     try {
       setLoading(true)
       const token = localStorage.getItem('token')
-      const response = await axios.get<ApiResponse>(`http://localhost:5000/api/invoice/summary/${companyId}`, {
+      const response = await axios.get<ApiResponse>(`https://susainvoice.onrender.com/api/invoice/summary/${companyId}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -131,7 +131,7 @@ export default function AllInvoices() {
 
     try {
       const token = localStorage.getItem('token')
-      await axios.delete(`http://localhost:5000/api/invoice/delete/${invoiceId}`, {
+      await axios.delete(`https://susainvoice.onrender.com/api/invoice/delete/${invoiceId}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }

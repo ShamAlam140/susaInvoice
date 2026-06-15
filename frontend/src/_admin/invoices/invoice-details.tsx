@@ -28,7 +28,7 @@ export default function InvoiceDetails() {
       try {
         setLoading(true)
         const token = localStorage.getItem('token')
-        const response = await axios.get(`http://localhost:5000/api/invoice/getbyId/${invoiceId}`, {
+        const response = await axios.get(`https://susainvoice.onrender.com/api/invoice/getbyId/${invoiceId}`, {
           headers: {
             Authorization: `Bearer ${token}`
           }

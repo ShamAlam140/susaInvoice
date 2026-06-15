@@ -66,7 +66,7 @@ export default function InvoiceForm({ isEdit = false }: InvoiceFormProps) {
   // Fetch next invoice number (only for new creation)
   const fetchNextInvoiceNumber = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/invoice/nextInvoiceNumber", {
+      const response = await axios.get("https://susainvoice.onrender.com/api/invoice/nextInvoiceNumber", {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       })
       if (response.data && response.data.nextInvoiceNumber) {
@@ -83,7 +83,7 @@ export default function InvoiceForm({ isEdit = false }: InvoiceFormProps) {
   // Fetch company details by ID
   const fetchCompanyDetails = async (id: string) => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/companies/getById/${id}`, {
+      const response = await axios.get(`https://susainvoice.onrender.com/api/companies/getById/${id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       })
       if (response.data) {
@@ -105,7 +105,7 @@ export default function InvoiceForm({ isEdit = false }: InvoiceFormProps) {
   // Fetch invoice details for editing
   const fetchInvoiceForEdit = async (id: string) => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/invoice/getbyId/${id}`, {
+      const response = await axios.get(`https://susainvoice.onrender.com/api/invoice/getbyId/${id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       })
       if (response.data && response.data.success) {
@@ -295,13 +295,13 @@ export default function InvoiceForm({ isEdit = false }: InvoiceFormProps) {
       let response
       if (isEdit && invoiceId) {
         response = await axios.put(
-          `http://localhost:5000/api/invoice/updateById/${invoiceId}`,
+          `https://susainvoice.onrender.com/api/invoice/updateById/${invoiceId}`,
           invoiceData,
           { headers: { Authorization: `Bearer ${token}` } }
         )
       } else {
         response = await axios.post(
-          "http://localhost:5000/api/invoice/add",
+          "https://susainvoice.onrender.com/api/invoice/add",
           invoiceData,
           { headers: { Authorization: `Bearer ${token}` } }
         )
