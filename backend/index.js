@@ -28,7 +28,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   'https://invoice-65289.web.app',
-  'https://serene-faun-12834b.netlify.app',
+  'https://susa-invoice.vercel.app',
   'https://peppy-hummingbird-3955c9.netlify.app'
 ];
 
