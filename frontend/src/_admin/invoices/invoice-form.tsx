@@ -1,9 +1,10 @@
 "use client"
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import axios from "axios"
+import api from "../../utils/api"
 import type { InvoiceData, InvoiceItem } from "./invoice-types"
 import { Plus, Minus, FileText, ArrowLeft, Save } from "lucide-react"
+import { CURRENCIES, CURRENCY_SYMBOLS } from "../../utils/currencies"
 
 interface InvoiceFormProps {
   isEdit?: boolean
@@ -21,6 +22,7 @@ export default function InvoiceForm({ isEdit = false }: InvoiceFormProps) {
     dueDate: new Date().toISOString().split("T")[0],
     poNumber: "",
     type: "Tax",
+    currency: "INR",
     companyId: companyId || "",
     billTo: {
       name: "",
@@ -66,9 +68,7 @@ export default function InvoiceForm({ isEdit = false }: InvoiceFormProps) {
   // Fetch next invoice number (only for new creation)
   const fetchNextInvoiceNumber = async () => {
     try {
-      const response = await axios.get("https://susainvoice.onrender.com/api/invoice/nextInvoiceNumber", {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      })
+      const response = await api.get("/api/invoice/nextInvoiceNumber")
       if (response.data && response.data.nextInvoiceNumber) {
         setInvoiceData((prev) => ({
           ...prev,
@@ -83,9 +83,7 @@ export default function InvoiceForm({ isEdit = false }: InvoiceFormProps) {
   // Fetch company details by ID
   const fetchCompanyDetails = async (id: string) => {
     try {
-      const response = await axios.get(`https://susainvoice.onrender.com/api/companies/getById/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      })
+      const response = await api.get(`/api/companies/getById/${id}`)
       if (response.data) {
         const company = response.data
         setInvoiceData((prev) => ({
@@ -105,9 +103,7 @@ export default function InvoiceForm({ isEdit = false }: InvoiceFormProps) {
   // Fetch invoice details for editing
   const fetchInvoiceForEdit = async (id: string) => {
     try {
-      const response = await axios.get(`https://susainvoice.onrender.com/api/invoice/getbyId/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      })
+      const response = await api.get(`/api/invoice/getbyId/${id}`)
       if (response.data && response.data.success) {
         setInvoiceData(response.data.data)
       }
@@ -291,19 +287,16 @@ export default function InvoiceForm({ isEdit = false }: InvoiceFormProps) {
     }
 
     try {
-      const token = localStorage.getItem('token')
       let response
       if (isEdit && invoiceId) {
-        response = await axios.put(
-          `https://susainvoice.onrender.com/api/invoice/updateById/${invoiceId}`,
-          invoiceData,
-          { headers: { Authorization: `Bearer ${token}` } }
+        response = await api.put(
+          `/api/invoice/updateById/${invoiceId}`,
+          invoiceData
         )
       } else {
-        response = await axios.post(
-          "https://susainvoice.onrender.com/api/invoice/add",
-          invoiceData,
-          { headers: { Authorization: `Bearer ${token}` } }
+        response = await api.post(
+          "/api/invoice/add",
+          invoiceData
         )
       }
 
@@ -359,16 +352,32 @@ export default function InvoiceForm({ isEdit = false }: InvoiceFormProps) {
               </div>
             </div>
 
-            <div className="flex items-center space-x-3">
-              <label className="text-sm font-semibold text-slate-700">Invoice Type:</label>
-              <select
-                value={invoiceData.type}
-                onChange={(e) => updateInvoiceField("type", e.target.value)}
-                className="p-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
-              >
-                <option value="Tax">Tax Invoice</option>
-                <option value="Proforma">Proforma Invoice</option>
-              </select>
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-2">
+                <label className="text-sm font-semibold text-slate-700">Invoice Type:</label>
+                <select
+                  value={invoiceData.type}
+                  onChange={(e) => updateInvoiceField("type", e.target.value)}
+                  className="p-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  <option value="Tax">Tax Invoice</option>
+                  <option value="Proforma">Proforma Invoice</option>
+                </select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <label className="text-sm font-semibold text-slate-700">Currency:</label>
+                <select
+                  value={invoiceData.currency || "INR"}
+                  onChange={(e) => updateInvoiceField("currency", e.target.value)}
+                  className="p-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  {CURRENCIES.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.code} ({c.symbol})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -508,8 +517,8 @@ export default function InvoiceForm({ isEdit = false }: InvoiceFormProps) {
                       <th className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Description of Goods</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-32">HSN Code</th>
                       <th className="px-4 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider w-24">Qty</th>
-                      <th className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider w-36">Rate (₹)</th>
-                      <th className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider w-36">Amount (₹)</th>
+                      <th className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider w-36">Rate ({CURRENCY_SYMBOLS[invoiceData.currency || 'INR']})</th>
+                      <th className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider w-36">Amount ({CURRENCY_SYMBOLS[invoiceData.currency || 'INR']})</th>
                       <th className="px-4 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider w-16"></th>
                     </tr>
                   </thead>
@@ -558,7 +567,7 @@ export default function InvoiceForm({ isEdit = false }: InvoiceFormProps) {
                           />
                         </td>
                         <td className="px-4 py-3 text-right text-sm font-semibold text-slate-800">
-                          ₹{((parseFloat(String(item.quantity)) || 0) * (parseFloat(String(item.rate)) || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {CURRENCY_SYMBOLS[invoiceData.currency || 'INR']}{((parseFloat(String(item.quantity)) || 0) * (parseFloat(String(item.rate)) || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <button
@@ -656,7 +665,7 @@ export default function InvoiceForm({ isEdit = false }: InvoiceFormProps) {
                   {/* Subtotal */}
                   <div className="flex justify-between items-center text-sm font-semibold text-slate-600">
                     <span>Subtotal:</span>
-                    <span>₹{invoiceData.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span>{CURRENCY_SYMBOLS[invoiceData.currency || 'INR']}{invoiceData.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
 
                   <div className="border-t border-slate-200/50 my-2"></div>
@@ -673,7 +682,7 @@ export default function InvoiceForm({ isEdit = false }: InvoiceFormProps) {
                         className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-center outline-none"
                       />
                       <div className="text-right text-[10px] text-slate-500 mt-0.5">
-                        ₹{invoiceData.cgstAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {CURRENCY_SYMBOLS[invoiceData.currency || 'INR']}{invoiceData.cgstAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </div>
                     </div>
                     <div>
@@ -685,7 +694,7 @@ export default function InvoiceForm({ isEdit = false }: InvoiceFormProps) {
                         className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-center outline-none"
                       />
                       <div className="text-right text-[10px] text-slate-500 mt-0.5">
-                        ₹{invoiceData.sgstAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {CURRENCY_SYMBOLS[invoiceData.currency || 'INR']}{invoiceData.sgstAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </div>
                     </div>
                     <div>
@@ -697,7 +706,7 @@ export default function InvoiceForm({ isEdit = false }: InvoiceFormProps) {
                         className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-center outline-none"
                       />
                       <div className="text-right text-[10px] text-slate-500 mt-0.5">
-                        ₹{invoiceData.igstAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {CURRENCY_SYMBOLS[invoiceData.currency || 'INR']}{invoiceData.igstAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </div>
                     </div>
                     <div>
@@ -709,7 +718,7 @@ export default function InvoiceForm({ isEdit = false }: InvoiceFormProps) {
                         className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-center outline-none"
                       />
                       <div className="text-right text-[10px] text-slate-500 mt-0.5">
-                        ₹{invoiceData.ugstAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {CURRENCY_SYMBOLS[invoiceData.currency || 'INR']}{invoiceData.ugstAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </div>
                     </div>
                   </div>
@@ -719,14 +728,14 @@ export default function InvoiceForm({ isEdit = false }: InvoiceFormProps) {
                   {/* Total Tax Amount */}
                   <div className="flex justify-between items-center text-sm font-semibold text-slate-600">
                     <span>Total Tax:</span>
-                    <span>₹{invoiceData.totalTaxAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span>{CURRENCY_SYMBOLS[invoiceData.currency || 'INR']}{invoiceData.totalTaxAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
 
                 {/* Final Total Amount */}
                 <div className="bg-blue-600 text-white p-4 rounded-xl flex justify-between items-center mt-6">
                   <span className="font-bold text-sm">Grand Total:</span>
-                  <span className="text-xl font-extrabold">₹{invoiceData.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-xl font-extrabold">{CURRENCY_SYMBOLS[invoiceData.currency || 'INR']}{invoiceData.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
             </div>

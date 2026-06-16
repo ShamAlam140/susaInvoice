@@ -3,15 +3,15 @@ import Invoice from "../models/invoices.js";
 // Helper function to generate next invoice number
 const generateNextInvoiceNumber = async () => {
   try {
-    const allInvoices = await Invoice.find({});
+    const latestInvoice = await Invoice.findOne({}).sort({ createdAt: -1 }).select('invoiceNumber');
     let maxNumber = 2500;
     
-    allInvoices.forEach(invoice => {
-      const num = parseInt(invoice.invoiceNumber);
+    if (latestInvoice) {
+      const num = parseInt(latestInvoice.invoiceNumber);
       if (!isNaN(num) && num > maxNumber) {
         maxNumber = num;
       }
-    });
+    }
     
     return String(maxNumber + 1);
   } catch (error) {
@@ -201,6 +201,7 @@ export const searchInvoicesByIdentifier = async (req, res) => {
       invoiceNumber: 1, 
       Date: 1, 
       type: 1, 
+      currency: 1,
       totalAmount: 1,
       billTo: 1
     }).sort({ createdAt: -1 });

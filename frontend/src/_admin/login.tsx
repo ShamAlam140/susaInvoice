@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react"
 import { useNavigate } from "react-router-dom"
 import axios from "axios"
+import api from "../utils/api"
 import { Mail, Lock, Loader2 } from "lucide-react"
 
 interface LoginResponse {
@@ -31,8 +32,8 @@ export default function Login() {
 
     try {
       // Step 1: Login
-      const loginResponse = await axios.post<LoginResponse>(
-        "https://susainvoice.onrender.com/api/user/login",
+      const loginResponse = await api.post<LoginResponse>(
+        "/api/user/login",
         { email, password },
         { headers: { "Content-Type": "application/json" } }
       )
@@ -42,8 +43,8 @@ export default function Login() {
         localStorage.setItem("refreshToken", refreshToken)
 
         // Step 2: Validate refreshToken
-        const validateResponse = await axios.post<ValidateResponse>(
-          "https://susainvoice.onrender.com/api/user/validate",
+        const validateResponse = await api.post<ValidateResponse>(
+          "/api/user/validate",
           { refreshToken },
           { headers: { "Content-Type": "application/json" } }
         )

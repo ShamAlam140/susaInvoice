@@ -13,7 +13,7 @@ import {
 
   // Plus,
 } from "lucide-react"
-import axios from "axios"
+import api from "../utils/api"
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -34,7 +34,7 @@ const AdminLayout = () => {
 
   const handleLogout = async () => {
     try {
-      await axios.post("https://susainvoice.onrender.com/api/user/logout");
+      await api.post("/api/user/logout");
 
       localStorage.clear();
       navigate("/");

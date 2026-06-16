@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { Suspense, lazy } from "react"
+import LoadingScreen from "./components/LoadingScreen"
 
 // Lazy load components
 const Login = lazy(() => import("./_admin/login"))
@@ -18,7 +19,7 @@ const InvoiceDetails = lazy(() => import("./_admin/invoices/invoice-details"))
 function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<div className="text-center p-4">Loading...</div>}>
+      <Suspense fallback={<LoadingScreen />}>
         <Routes>
           <Route path="/" element={<Login />} />
           <Route

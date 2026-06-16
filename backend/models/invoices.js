@@ -9,6 +9,7 @@ const InvoiceSchema = new mongoose.Schema({
   dueDate: { type: String, required: false },
   poNumber: { type: String, required: false },
   type: { type: String, enum: ['Tax', 'Proforma'], default: 'Tax', required: true }, // Tax or Proforma
+  currency: { type: String, default: 'INR', required: true },
   
   // Company Reference
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },

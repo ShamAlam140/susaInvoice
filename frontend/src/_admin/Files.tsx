@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import axios from "axios"
+import api from "../utils/api"
 import { Trash2, Edit, Search, Plus, FileText, Calendar, X } from "lucide-react"
 
 interface FileRecord {
@@ -35,10 +36,9 @@ export default function Files() {
     endDate: "",
   })
   const [toasts, setToasts] = useState<Toast[]>([])
-  const API_BASE = "https://susainvoice.onrender.com/api/files" // Adjust this to your backend URL
+  const API_BASE = "/api/files"
 
-  // Configure axios defaults
-  axios.defaults.timeout = 10000 // 10 seconds timeout
+  // Configure API client defaults
 
   // Toast functionality
   const showToast = (title: string, description: string, type: "success" | "error" = "success") => {
@@ -58,7 +58,7 @@ export default function Files() {
   const fetchFiles = async () => {
     setLoading(true)
     try {
-      const response = await axios.get(`${API_BASE}/getAll`)
+      const response = await api.get(`${API_BASE}/getAll`)
       setFiles(response.data)
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -95,7 +95,7 @@ export default function Files() {
 
     setLoading(true)
     try {
-      const response = await axios.post(`${API_BASE}/upload`, formDataToSend, {
+      const response = await api.post(`${API_BASE}/upload`, formDataToSend, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -142,7 +142,7 @@ export default function Files() {
 
     setLoading(true)
     try {
-      const response = await axios.put(`${API_BASE}/update/${editingFile._id}`, formDataToSend, {
+      const response = await api.put(`${API_BASE}/update/${editingFile._id}`, formDataToSend, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -173,7 +173,7 @@ export default function Files() {
 
     setLoading(true)
     try {
-      const response = await axios.delete(`${API_BASE}/delete/${id}`)
+      const response = await api.delete(`${API_BASE}/delete/${id}`)
       showToast("Success", response.data.message || "File record deleted successfully")
       fetchFiles()
     } catch (error) {
@@ -195,7 +195,7 @@ export default function Files() {
       if (filters.companyName) params.companyName = filters.companyName
       if (filters.startDate) params.startDate = filters.startDate
       if (filters.endDate) params.endDate = filters.endDate
-      const response = await axios.get(`${API_BASE}/filter`, { params })
+      const response = await api.get(`${API_BASE}/filter`, { params })
       setFiles(response.data)
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -679,8 +679,8 @@ export default function Files() {
                     <button
                       onClick={() => removeToast(toast.id)}
                       className={`rounded-md inline-flex ${toast.type === "success"
-                          ? "text-green-400 hover:text-green-500 focus:ring-green-600"
-                          : "text-red-400 hover:text-red-500 focus:ring-red-600"
+                        ? "text-green-400 hover:text-green-500 focus:ring-green-600"
+                        : "text-red-400 hover:text-red-500 focus:ring-red-600"
                         } focus:outline-none focus:ring-2 focus:ring-offset-2`}
                     >
                       <X className="w-4 h-4" />

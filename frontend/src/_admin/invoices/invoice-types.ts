@@ -24,6 +24,7 @@ export interface InvoiceData {
   dueDate: string
   poNumber: string
   type: 'Tax' | 'Proforma'
+  currency?: string
   companyId: string
   billTo: {
     name: string

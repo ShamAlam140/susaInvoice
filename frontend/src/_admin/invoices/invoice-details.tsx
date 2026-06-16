@@ -1,13 +1,14 @@
 "use client"
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import axios from "axios"
+import api from "../../utils/api"
 import { ArrowLeft, Printer, MapPin, Phone, Mail, Download } from "lucide-react"
 // @ts-ignore
 import html2pdf from "html2pdf.js"
 import type { InvoiceData } from "./invoice-types"
 import logo from "../../assets/logo1.jpeg"
 import stamp from "../../assets/stamp.png"
+import { CURRENCIES } from "../../utils/currencies"
 
 export default function InvoiceDetails() {
   const { invoiceId } = useParams<{ invoiceId: string }>()
@@ -27,12 +28,7 @@ export default function InvoiceDetails() {
 
       try {
         setLoading(true)
-        const token = localStorage.getItem('token')
-        const response = await axios.get(`https://susainvoice.onrender.com/api/invoice/getbyId/${invoiceId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
+        const response = await api.get(`/api/invoice/getbyId/${invoiceId}`)
 
         if (response.data.success) {
           setInvoiceData(response.data.data)
@@ -62,11 +58,11 @@ export default function InvoiceDetails() {
       margin: 0,
       filename: `${invoiceData?.type === "Proforma" ? "Proforma" : "Tax"}_Invoice_${invoiceData?.invoiceNumber || "Invoice"}_${copyType}.pdf`,
       image: { type: "jpeg", quality: 1.0 },
-      html2canvas: { 
-        scale: 4, 
-        useCORS: true, 
+      html2canvas: {
+        scale: 4,
+        useCORS: true,
         logging: false,
-        letterRendering: true 
+        letterRendering: true
       },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait", compress: true }
     }
@@ -75,8 +71,10 @@ export default function InvoiceDetails() {
     html2pdf().set(opt).from(element).save()
   }
 
-  // Convert numbers to words in Indian format (helpful for premium look)
-  const numberToWords = (num: number): string => {
+  // Convert numbers to words with multi-currency support
+  const numberToWords = (num: number, currencyCode: string = 'INR'): string => {
+    const activeCurrency = CURRENCIES.find(c => c.code === currencyCode) || CURRENCIES[0]
+
     const a = [
       '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
       'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
@@ -96,40 +94,75 @@ export default function InvoiceDetails() {
       return formatTens(n)
     }
 
-    const convert = (n: number): string => {
+    const convertIndian = (n: number): string => {
       if (n === 0) return 'Zero'
-      
+
       const crores = Math.floor(n / 10000000)
       n %= 10000000
-      
+
       const lakhs = Math.floor(n / 100000)
       n %= 100000
-      
+
       const thousands = Math.floor(n / 1000)
       n %= 1000
-      
+
       let str = ''
       if (crores) str += formatHundreds(crores) + ' Crore '
       if (lakhs) str += formatHundreds(lakhs) + ' Lakh '
       if (thousands) str += formatHundreds(thousands) + ' Thousand '
       if (n) str += formatHundreds(n)
-      
+
       return str.trim()
+    }
+
+    const convertInternational = (n: number): string => {
+      if (n === 0) return 'Zero'
+
+      let parts = []
+
+      const billions = Math.floor(n / 1000000000)
+      if (billions) {
+        parts.push(formatHundreds(billions) + ' Billion')
+        n %= 1000000000
+      }
+
+      const millions = Math.floor(n / 1000000)
+      if (millions) {
+        parts.push(formatHundreds(millions) + ' Million')
+        n %= 1000000
+      }
+
+      const thousands = Math.floor(n / 1000)
+      if (thousands) {
+        parts.push(formatHundreds(thousands) + ' Thousand')
+        n %= 1000
+      }
+
+      if (n) {
+        parts.push(formatHundreds(n))
+      }
+
+      return parts.join(' ').trim()
     }
 
     const integerPart = Math.floor(num)
     const decimalPart = Math.round((num - integerPart) * 100)
-    
-    let result = convert(integerPart) + ' Rupees'
+
+    let integerWords = activeCurrency.useIndianFormat ? convertIndian(integerPart) : convertInternational(integerPart)
+    let result = integerWords + ' ' + activeCurrency.name
+
     if (decimalPart > 0) {
-      result += ' and ' + convert(decimalPart) + ' Paise'
+      let decimalWords = activeCurrency.useIndianFormat ? convertIndian(decimalPart) : convertInternational(decimalPart)
+      result += ' and ' + decimalWords + ' ' + activeCurrency.subUnit
     }
+
     result += ' Only'
     return result
   }
 
   const renderInvoiceSheet = (copyType: 'ORIGINAL' | 'DUPLICATE') => {
     if (!invoiceData) return null
+    const activeCurrency = CURRENCIES.find(c => c.code === (invoiceData.currency || 'INR')) || CURRENCIES[0]
 
     return (
       <>
@@ -243,8 +276,8 @@ export default function InvoiceDetails() {
                 <th className="px-3 py-2.5 border border-white/20">Description</th>
                 <th className="px-3 py-2.5 w-24 text-center border border-white/20">HSN/SAC</th>
                 <th className="px-3 py-2.5 w-16 text-center border border-white/20">Qty</th>
-                <th className="px-3 py-2.5 w-24 text-right border border-white/20">Rate (₹)</th>
-                <th className="px-3 py-2.5 w-28 text-right border border-white/20">Amount (₹)</th>
+                <th className="px-3 py-2.5 w-24 text-right border border-white/20">Rate ({activeCurrency.symbol})</th>
+                <th className="px-3 py-2.5 w-28 text-right border border-white/20">Amount ({activeCurrency.symbol})</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-slate-700 bg-white">
@@ -272,10 +305,10 @@ export default function InvoiceDetails() {
                     <td className="px-3 py-2.5 text-center font-medium text-slate-500 border border-slate-200">{item.hsnCode || "-"}</td>
                     <td className="px-3 py-2.5 text-center font-semibold text-slate-800 border border-slate-200">{qty}</td>
                     <td className="px-3 py-2.5 text-right border border-slate-200">
-                      {rate.toFixed(2)}
+                      {activeCurrency.symbol}{rate.toFixed(2)}
                     </td>
                     <td className="px-3 py-2.5 text-right font-bold text-slate-900 border border-slate-200">
-                      {amt.toFixed(2)}
+                      {activeCurrency.symbol}{amt.toFixed(2)}
                     </td>
                   </tr>
                 )
@@ -287,7 +320,7 @@ export default function InvoiceDetails() {
                 <td colSpan={4} className="bg-white border-t border-slate-200"></td>
                 <td className="px-3 py-2 text-right font-bold text-slate-700 border border-slate-200">Subtotal</td>
                 <td className="px-3 py-2 text-right font-bold text-slate-800 border border-slate-200">
-                  {invoiceData.subtotal.toFixed(2)}
+                  {activeCurrency.symbol}{invoiceData.subtotal.toFixed(2)}
                 </td>
               </tr>
               <tr className="bg-slate-50">
@@ -295,7 +328,7 @@ export default function InvoiceDetails() {
                   Taxes: {invoiceData.cgstRate || 0}% CGST + {invoiceData.sgstRate || 0}% SGST + {invoiceData.ugstRate || 0}% UGST + {invoiceData.igstRate || 0}% IGST
                 </td>
                 <td className="px-3 py-2 text-right font-bold text-slate-800 border border-slate-200">
-                  {invoiceData.totalTaxAmount.toFixed(2)}
+                  {activeCurrency.symbol}{invoiceData.totalTaxAmount.toFixed(2)}
                 </td>
               </tr>
               <tr className="bg-[#e6f0fa] font-extrabold text-xs">
@@ -303,7 +336,7 @@ export default function InvoiceDetails() {
                   Total Amount
                 </td>
                 <td className="px-3 py-2.5 text-right text-blue-900 border border-slate-200 font-extrabold text-sm">
-                  ₹{invoiceData.totalAmount.toFixed(2)}
+                  {activeCurrency.symbol}{invoiceData.totalAmount.toFixed(2)}
                 </td>
               </tr>
             </tfoot>
@@ -313,7 +346,7 @@ export default function InvoiceDetails() {
         {/* Amount in words block */}
         <div className="mb-6 p-3 bg-slate-50 border border-slate-100 rounded-md text-[11px]">
           <span className="font-bold text-slate-800">Amount in Words: </span>
-          <span className="text-slate-800 font-medium">{numberToWords(invoiceData.totalAmount)}</span>
+          <span className="text-slate-800 font-medium">{numberToWords(invoiceData.totalAmount, invoiceData.currency)}</span>
         </div>
 
         {/* Terms and Bank details block in two columns */}
@@ -420,7 +453,8 @@ export default function InvoiceDetails() {
 
   return (
     <div className="min-h-screen bg-slate-100 p-6 print:bg-white print:p-0">
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @media print {
           * {
             -webkit-print-color-adjust: exact !important;
@@ -506,7 +540,7 @@ export default function InvoiceDetails() {
         style={{ fontFamily: "'Inter', sans-serif" }}
       >
         {/* Original Copy Sheet */}
-        <div 
+        <div
           id="invoice-original-area"
           className="bg-white p-8 border border-slate-200 shadow-xl rounded-none print:border-none print:shadow-none print:p-0 print:rounded-none"
         >
@@ -517,7 +551,7 @@ export default function InvoiceDetails() {
         <div className="page-break" style={{ pageBreakBefore: 'always', height: 0, overflow: 'hidden' }}></div>
 
         {/* Duplicate Copy Sheet */}
-        <div 
+        <div
           id="invoice-duplicate-area"
           className="bg-white p-8 border border-slate-200 shadow-xl rounded-none print:border-none print:shadow-none print:p-0 print:rounded-none print:mt-0"
         >

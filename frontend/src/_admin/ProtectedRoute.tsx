@@ -1,7 +1,7 @@
 // src/_admin/ProtectedRoute.tsx
 import { useEffect, useState } from "react"
 import { Navigate } from "react-router-dom"
-import axios from "axios"
+import api from "../utils/api"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -20,8 +20,8 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
       }
 
       try {
-        const res = await axios.post(
-          "https://susainvoice.onrender.com/api/user/validate",
+        const res = await api.post(
+          "/api/user/validate",
           { refreshToken },
           { headers: { "Content-Type": "application/json" } }
         )

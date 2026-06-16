@@ -1,13 +1,16 @@
 "use client"
 import { useState, useEffect } from "react"
 import axios from "axios"
+import api from "../../utils/api"
 import { useParams, useNavigate } from "react-router-dom"
 import { Search, Plus, Eye, ChevronLeft, ChevronRight, Edit3, Trash2 } from "lucide-react"
+import { CURRENCY_SYMBOLS } from "../../utils/currencies"
 
 interface Invoice {
   _id: string
   invoiceNumber: string
   type: 'Tax' | 'Proforma'
+  currency?: string
   totalAmount: number
   subtotal: number
   totalTaxAmount: number
@@ -37,6 +40,20 @@ export default function AllInvoices() {
   const { companyId } = useParams<{ companyId: string }>()
   const navigate = useNavigate()
   const [invoices, setInvoices] = useState<Invoice[]>([])
+
+  const formatInvoiceMoney = (amount: number, currencyCode: string = 'INR') => {
+    const symbol = CURRENCY_SYMBOLS[currencyCode] || '₹'
+    return `${symbol}${(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
+
+  const getCompanyCurrency = () => {
+    if (invoices.length > 0) {
+      const firstCurrency = invoices[0].currency || 'INR'
+      const allSame = invoices.every(inv => (inv.currency || 'INR') === firstCurrency)
+      if (allSame) return firstCurrency
+    }
+    return 'INR'
+  }
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -54,12 +71,7 @@ export default function AllInvoices() {
 
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
-      const response = await axios.get<ApiResponse>(`https://susainvoice.onrender.com/api/invoice/summary/${companyId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      })
+      const response = await api.get<ApiResponse>(`/api/invoice/summary/${companyId}`)
 
       if (response.data.success) {
         const invoiceData = response.data.data || []
@@ -130,12 +142,7 @@ export default function AllInvoices() {
     if (!window.confirm("Are you sure you want to delete this invoice?")) return
 
     try {
-      const token = localStorage.getItem('token')
-      await axios.delete(`https://susainvoice.onrender.com/api/invoice/delete/${invoiceId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      })
+      await api.delete(`/api/invoice/delete/${invoiceId}`)
       alert("Invoice deleted successfully")
       fetchInvoices()
     } catch (err) {
@@ -200,7 +207,7 @@ export default function AllInvoices() {
             </div>
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
               <p className="text-slate-500 text-sm font-semibold">Total Amount</p>
-              <h3 className="text-2xl font-bold text-slate-900 mt-1">₹{summary.totalAmount?.toLocaleString()}</h3>
+              <h3 className="text-2xl font-bold text-slate-900 mt-1">{CURRENCY_SYMBOLS[getCompanyCurrency()]}{(summary.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             </div>
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
               <p className="text-slate-500 text-sm font-semibold">Tax Invoices</p>
@@ -274,13 +281,13 @@ export default function AllInvoices() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                        ₹{(invoice.subtotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {formatInvoiceMoney(invoice.subtotal || 0, invoice.currency)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                        ₹{(invoice.totalTaxAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {formatInvoiceMoney(invoice.totalTaxAmount || 0, invoice.currency)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">
-                        ₹{(invoice.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {formatInvoiceMoney(invoice.totalAmount || 0, invoice.currency)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                         {invoice.Date ? new Date(invoice.Date).toLocaleDateString() : "N/A"}
@@ -372,8 +379,8 @@ export default function AllInvoices() {
                       key={page}
                       onClick={() => handlePageChange(page)}
                       className={`px-3 py-1.5 text-sm font-semibold rounded-lg border ${page === currentPage
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "bg-white border-slate-200 hover:bg-slate-50 text-slate-600"
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white border-slate-200 hover:bg-slate-50 text-slate-600"
                         }`}
                     >
                       {page}

@@ -15,38 +15,76 @@ export const getDashboardSummary = async (req, res) => {
     const [
       totalCompanies,
       totalInvoices,
-      typeAgg,
-      totalRevenueAgg,
+      currencyGroups,
       recentInvoices
     ] = await Promise.all([
       Company.countDocuments({}),
       Invoice.countDocuments(companyId ? { companyId } : {}),
       Invoice.aggregate([
         { $match: match },
-        { $group: { _id: '$type', count: { $sum: 1 } } }
-      ]),
-      Invoice.aggregate([
-        { $match: match },
-        { $group: { _id: null, total: { $sum: { $ifNull: ['$totalAmount', 0] } } } }
+        {
+          $group: {
+            _id: {
+              currency: { $ifNull: ['$currency', 'INR'] },
+              type: { $ifNull: ['$type', 'Tax'] }
+            },
+            count: { $sum: 1 },
+            totalAmount: { $sum: { $ifNull: ['$totalAmount', 0] } }
+          }
+        }
       ]),
       Invoice.find(match)
         .sort({ createdAt: -1 })
         .limit(5)
-        .select('_id invoiceNumber type totalAmount Date billTo.name')
+        .select('_id invoiceNumber type currency totalAmount Date billTo.name')
         .lean()
     ]);
 
-    const typeCounts = typeAgg.reduce((acc, cur) => {
-      acc[cur._id || 'Tax'] = cur.count;
-      return acc;
-    }, {});
+    const breakdown = {};
+    let globalTaxCount = 0;
+    let globalProformaCount = 0;
+    let globalRevenue = 0;
+
+    currencyGroups.forEach(group => {
+      const currency = group._id.currency || 'INR';
+      const type = group._id.type || 'Tax';
+      
+      if (!breakdown[currency]) {
+        breakdown[currency] = {
+          currency,
+          totalInvoices: 0,
+          totalAmount: 0,
+          taxCount: 0,
+          taxAmount: 0,
+          proformaCount: 0,
+          proformaAmount: 0
+        };
+      }
+      
+      breakdown[currency].totalInvoices += group.count;
+      breakdown[currency].totalAmount += group.totalAmount;
+      globalRevenue += group.totalAmount;
+      
+      if (type === 'Tax') {
+        breakdown[currency].taxCount = group.count;
+        breakdown[currency].taxAmount = group.totalAmount;
+        globalTaxCount += group.count;
+      } else if (type === 'Proforma') {
+        breakdown[currency].proformaCount = group.count;
+        breakdown[currency].proformaAmount = group.totalAmount;
+        globalProformaCount += group.count;
+      }
+    });
+
+    const currencyBreakdown = Object.values(breakdown);
 
     const summary = {
       totalCompanies,
       totalInvoices,
-      taxInvoices: typeCounts['Tax'] || 0,
-      proformaInvoices: typeCounts['Proforma'] || 0,
-      totalRevenue: (totalRevenueAgg[0]?.total || 0),
+      taxInvoices: globalTaxCount,
+      proformaInvoices: globalProformaCount,
+      totalRevenue: globalRevenue,
+      currencyBreakdown,
       recentInvoices
     };
 

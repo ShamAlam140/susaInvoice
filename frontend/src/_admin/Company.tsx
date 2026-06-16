@@ -3,7 +3,7 @@
 import type React from "react"
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom" // Import Link from react-router-dom
-import axios from "axios"
+import api from "../utils/api"
 
 import { Building2, Plus, Edit, Trash2, X, Search, Filter, ChevronLeft, ChevronRight, Eye } from "lucide-react"
 
@@ -32,7 +32,7 @@ const Company: React.FC = () => {
   const fetchCompanies = async () => {
     setLoading(true)
     try {
-      const res = await axios.get("https://susainvoice.onrender.com/api/companies/getAll")
+      const res = await api.get("/api/companies/getAll")
       setCompanies(res.data)
       setFilteredCompanies(res.data)
     } catch (err) {
@@ -46,7 +46,7 @@ const Company: React.FC = () => {
     e.preventDefault()
     setLoading(true)
     try {
-      await axios.post("https://susainvoice.onrender.com/api/companies/add", newCompany)
+      await api.post("/api/companies/add", newCompany)
       setShowModal(false)
       setNewCompany({ name: "", address: "", gstNumber: "" })
       fetchCompanies()
@@ -61,7 +61,7 @@ const Company: React.FC = () => {
     if (window.confirm("Are you sure you want to delete this company?")) {
       setLoading(true)
       try {
-        await axios.delete(`https://susainvoice.onrender.com/api/companies/deleteById/${id}`)
+        await api.delete(`/api/companies/deleteById/${id}`)
         fetchCompanies()
       } catch (err) {
         console.error("Error deleting company", err)
@@ -76,7 +76,7 @@ const Company: React.FC = () => {
     setLoading(true)
     try {
       if (editingCompany) {
-        await axios.put(`https://susainvoice.onrender.com/api/companies/updateById/${editingCompany._id}`, editingCompany)
+        await api.put(`/api/companies/updateById/${editingCompany._id}`, editingCompany)
         setEditingCompany(null)
         fetchCompanies()
       }
@@ -248,8 +248,8 @@ const Company: React.FC = () => {
                             key={pageNumber}
                             onClick={() => paginate(pageNumber)}
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${currentPage === pageNumber
-                                ? "bg-blue-600 text-white"
-                                : "border border-slate-200 hover:bg-white text-slate-600"
+                              ? "bg-blue-600 text-white"
+                              : "border border-slate-200 hover:bg-white text-slate-600"
                               }`}
                           >
                             {pageNumber}
